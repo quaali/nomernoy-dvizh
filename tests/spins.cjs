@@ -1,0 +1,25 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(new URL('../dist/index.html',`file://${__filename}`),'utf8').split('<script>')[1].split('</script>')[0].replace('render();initAds();setInterval(refreshFree,1000);','');
+let click,stored,renderCount=0;const pending={letters:[],digits:[],region:[]};
+const button=(dataset={})=>({dataset,disabled:false,textContent:'',setAttribute(){},hasAttribute(key){return key==='data-'+Object.keys(dataset)[0]}});
+const buttons=['letters','digits','region'].map(part=>button({spin:part}));const keep=button({keep:''}),free=button({free:''}),locked=[button({tab:'Коллекция'}),button({ad:''}),button({reset:''})];
+const document={addEventListener(type,fn){if(type==='click')click=fn},querySelector(s){return s==='[data-keep]'?keep:s==='[data-free]'?free:{innerHTML:''}},querySelectorAll(s){if(s==='[data-spin]')return buttons;if(s==='[data-tab],[data-ad],[data-reset]')return locked;const m=s.match(/data-part="(letters|digits|region)"/);if(m&&s.includes('.glyph-face'))return Array.from({length:m[1]==='region'?2:3},()=>({parentElement:{classList:{add(){}}},animate(){return{finished:new Promise(resolve=>pending[m[1]].push(resolve))}}}));return[]}};
+const context={document,localStorage:{getItem:()=>null,setItem:(k,v)=>stored=v},console,setTimeout(){},clearTimeout(){}};vm.createContext(context);vm.runInContext(source,context);context.recordRender=()=>renderCount++;
+vm.runInContext('render=recordRender;animateSpend=()=>{};showSpinPart=()=>{};notice=()=>{};state.money=2000',context);
+const read=expr=>vm.runInContext(expr,context),tap=part=>click({target:{closest:()=>buttons.find(b=>b.dataset.spin===part)}}),flush=()=>new Promise(resolve=>setImmediate(resolve));
+const finish=async part=>{pending[part].splice(0).forEach(resolve=>resolve());await flush()};
+(async()=>{
+ tap('digits');assert(!buttons[0].disabled&&!buttons[2].disabled,'other spin buttons must stay enabled');
+ tap('letters');tap('region');assert.equal(read('state.money'),1250);assert.equal(read('spinningParts.size'),3);
+ tap('digits');read("spin('digits')");assert.equal(read('state.money'),1250,'duplicate click charged twice');
+ assert(keep.disabled&&free.disabled&&locked[0].disabled,'unsafe actions unlocked during spin');
+ const saved=JSON.parse(stored);assert(saved.current.letters&&saved.current.digits&&saved.current.region,'outcomes not saved immediately');
+ await finish('digits');assert.equal(read('spinningParts.size'),2);assert.equal(renderCount,0,'full rerender interrupted other reels');assert(!buttons[1].disabled);
+ tap('digits');assert.equal(read('state.money'),950);assert.equal(read('spinningParts.size'),3);
+ await finish('region');assert(read('busy'));await finish('letters');assert(read('busy'));await finish('digits');assert(!read('busy'));assert.equal(renderCount,1);assert.equal(JSON.parse(stored).money,950);
+ read("state.money=0;spin('letters')");assert.equal(read('spinningParts.size'),0,'insufficient funds started reel');
+ read('state.current=emptyPlate();state.dirty=false;freeRound()');assert.equal(read('spinningParts.size'),3);assert(buttons.every(b=>b.disabled));assert.equal(read('state.money'),0);
+ read("spin('letters')");assert.equal(pending.letters.length,3,'manual spin interfered with free round');
+ await finish('letters');await finish('digits');await finish('region');assert(!read('busy||freeSequence'));assert(read('completePlate(state.current)'));assert.equal(read('state.money'),0);
+ console.log('PASS: concurrent spins, separate button locks, duplicate prevention, exact debits, durable outcomes, completion order, re-spin and free round.');
+})().catch(e=>{console.error(e);process.exitCode=1});
