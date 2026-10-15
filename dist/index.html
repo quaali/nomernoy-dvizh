@@ -93,16 +93,17 @@ if(tab==='Гараж'){m.innerHTML='<p class="tag">МАШИНЫ С ХАРАКТ�
 refreshFree();
 }
 // Weighted outcomes; the remaining chance goes to combinations without repeats.
-const SPIN_ODDS={digits:{triple:.01,pair:.20},letters:{triple:.01,pair:.20,amr:.005}};
+const SPIN_ODDS={digits:{triple:.01,pair:.20,special067:.005},letters:{triple:.01,pair:.20,amr:.005}};
 const SPIN_POOLS={digits:{triple:[],pair:[],plain:[]},letters:{triple:[],pair:[],plain:[]}};
-function addSpinOutcome(part,value){if(part==='letters'&&value==='АМР')return;const unique=new Set(value).size;SPIN_POOLS[part][unique===1?'triple':unique===2?'pair':'plain'].push(value)}
+function addSpinOutcome(part,value){if((part==='letters'&&value==='АМР')||(part==='digits'&&value==='067'))return;const unique=new Set(value).size;SPIN_POOLS[part][unique===1?'triple':unique===2?'pair':'plain'].push(value)}
 for(let n=1;n<=999;n++)addSpinOutcome('digits',String(n).padStart(3,'0'));
 for(const a of ABC)for(const b of ABC)for(const c of ABC)addSpinOutcome('letters',a+b+c);
 function rollPart(part){
  if(part==='region')return pick(REGIONS);
  const odds=SPIN_ODDS[part],chance=Math.random();
  if(part==='letters'&&chance<odds.amr)return 'АМР';
- const offset=odds.amr||0;
+ if(part==='digits'&&chance<odds.special067)return '067';
+ const offset=odds.amr||odds.special067||0;
  const pool=chance<offset+odds.triple?'triple':chance<offset+odds.triple+odds.pair?'pair':'plain';
  return pick(SPIN_POOLS[part][pool]);
 }
