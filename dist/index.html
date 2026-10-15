@@ -90,6 +90,20 @@ if(tab==='Гараж'){m.innerHTML='<p class="tag">МАШИНЫ С ХАРАКТ�
 
 refreshFree();
 }
+// Weighted outcomes; the remaining chance goes to combinations without repeats.
+const SPIN_ODDS={digits:{triple:.08,pair:.32},letters:{triple:.06,pair:.30,amr:.05}};
+const SPIN_POOLS={digits:{triple:[],pair:[],plain:[]},letters:{triple:[],pair:[],plain:[]}};
+function addSpinOutcome(part,value){if(part==='letters'&&value==='АМР')return;const unique=new Set(value).size;SPIN_POOLS[part][unique===1?'triple':unique===2?'pair':'plain'].push(value)}
+for(let n=1;n<=999;n++)addSpinOutcome('digits',String(n).padStart(3,'0'));
+for(const a of ABC)for(const b of ABC)for(const c of ABC)addSpinOutcome('letters',a+b+c);
+function rollPart(part){
+ if(part==='region')return pick(REGIONS);
+ const odds=SPIN_ODDS[part],chance=Math.random();
+ if(part==='letters'&&chance<odds.amr)return 'АМР';
+ const offset=odds.amr||0;
+ const pool=chance<offset+odds.triple?'triple':chance<offset+odds.triple+odds.pair?'pair':'plain';
+ return pick(SPIN_POOLS[part][pool]);
+}
 function updateSpinControls(){
  document.querySelectorAll('[data-spin]').forEach(b=>{b.disabled=adBusy||freeSequence||spinningParts.has(b.dataset.spin);b.setAttribute('aria-busy',String(spinningParts.has(b.dataset.spin)))});
  document.querySelectorAll('[data-tab],[data-ad],[data-reset]').forEach(b=>b.disabled=busy||freeSequence||adBusy||(b.hasAttribute('data-ad')&&!sdk));
@@ -106,7 +120,7 @@ async function spin(part,free=false){
  const cost=free?0:costs[part];if(state.money<cost)return notice('Не хватает денег. Продай номер из коллекции.');
  spinningParts.add(part);busy=true;
  const previousMoney=state.money;state.money-=cost;
- const result=part==='letters'?Array.from({length:3},()=>pick(ABC)).join(''):part==='digits'?String(1+Math.floor(Math.random()*999)).padStart(3,'0'):pick(REGIONS);
+ const result=rollPart(part);
  state.current[part]=result;state.dirty=true;save();
  if(cost)animateSpend(previousMoney,cost);
  updateSpinControls();showSpinPart(part,result);
