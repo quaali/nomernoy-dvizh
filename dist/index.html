@@ -93,7 +93,7 @@ if(tab==='Гараж'){m.innerHTML='<p class="tag">МАШИНЫ С ХАРАКТ�
 refreshFree();
 }
 // Weighted outcomes; the remaining chance goes to combinations without repeats.
-const SPIN_ODDS={digits:{triple:.08,pair:.32},letters:{triple:.06,pair:.30,amr:.05}};
+const SPIN_ODDS={digits:{triple:.01,pair:.20},letters:{triple:.01,pair:.20,amr:.005}};
 const SPIN_POOLS={digits:{triple:[],pair:[],plain:[]},letters:{triple:[],pair:[],plain:[]}};
 function addSpinOutcome(part,value){if(part==='letters'&&value==='АМР')return;const unique=new Set(value).size;SPIN_POOLS[part][unique===1?'triple':unique===2?'pair':'plain'].push(value)}
 for(let n=1;n<=999;n++)addSpinOutcome('digits',String(n).padStart(3,'0'));

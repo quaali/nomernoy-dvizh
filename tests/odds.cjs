@@ -12,6 +12,6 @@ for(const part of ['digits','letters'])for(let i=0;i<100000;i++){
  counts[part][value==='АМР'?'amr':distinct===1?'triple':distinct===2?'pair':'plain']++;
 }
 counts`,context);
-for(const [part,expected] of Object.entries({digits:{triple:.08,pair:.32,plain:.60},letters:{triple:.06,pair:.30,amr:.05,plain:.59}}))for(const [bucket,chance] of Object.entries(expected))assert(Math.abs(result[part][bucket]/100000-chance)<.006,`${part} ${bucket} frequency mismatch`);
+for(const [part,expected] of Object.entries({digits:{triple:.01,pair:.20,plain:.79},letters:{triple:.01,pair:.20,amr:.005,plain:.785}}))for(const [bucket,chance] of Object.entries(expected))assert(Math.abs(result[part][bucket]/100000-chance)<.006,`${part} ${bucket} frequency mismatch`);
 for(const part of ['digits','letters'])assert.equal(vm.runInContext(`new Set(Object.values(SPIN_POOLS.${part}).flat()).size`,context),part==='digits'?999:1727,'missing or duplicate outcomes');
 console.log('PASS: 100,000 draws per part, weighted frequencies, all valid combinations and no 000.');console.log(JSON.stringify(result));
